@@ -46,24 +46,35 @@ class moodleoverflow implements townsquaresupportinterface {
     public static function get_events(): array {
         global $DB;
 
-        $courses = townsquare_get_courses();
-        $timestart = townsquare_get_timestart();
-
         // If moodleoverflow is not installed or not activated, return empty array.
         if (!$DB->get_record('modules', ['name' => 'forum', 'visible' => 1])) {
             return [];
         }
 
-        // Get posts from the database.
-        $moodleoverflowposts = self::get_moodleoverflowposts_from_db($courses, $timestart);
+        // Get important parameters directly from townsquare.
+        $courses = townsquare_get_courses();
+        $timestart = townsquare_get_timestart();
+        $timeend = townsquare_get_timeend();
 
-        // Filter posts by availability.
-        foreach ($moodleoverflowposts as $post) {
-            if (townsquare_filter_availability($post)) {
-                unset($moodleoverflowposts[$post->row_num]);
+        // Get all moodleoverflow posts and events.
+        $moodleoverflowevents = array_merge( self::get_moodleoverflowposts_from_db($courses, $timestart),
+                                             self::get_other_events_from_db($courses, $timestart, $timeend));
+
+        // Filter out events that are irrelevant for the user.
+        // Irrelevant are events/posts from unavailable moodleoverflows or activity completion notifications, that are completed.
+        foreach ($moodleoverflowevents as $key => $event) {
+            if ( (townsquare_filter_availability($event)) ||
+                 ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
+                unset($moodleoverflowevents[$key]);
+            }
+
+            // Add the name of the instance to events.
+            if ($event->eventtype != 'post') {
+                $event->instancename = $DB->get_field($event->modulename, 'name', ['id' => $event->instance]);
             }
         }
-        return $moodleoverflowposts;
+
+        return $moodleoverflowevents;
     }
 
     private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
@@ -103,6 +114,32 @@ class moodleoverflow implements townsquaresupportinterface {
                 AND modules.visible = 1
                 ORDER BY posts.created DESC;";
 
+        return $DB->get_records_sql($sql, $params);
+    }
+
+    private static function get_other_events_from_db($courses, $timestart, $timeend): array {
+        global $DB;
+        // Prepare params for sql statement.
+        list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
+
+        $params = ['timestart' => $timestart, 'timeduration' => $timestart,
+                   'timeend' => $timeend, 'courses' => $courses] + $inparamscourses;
+        // Set the sql statement.
+        $sql = "SELECT e.id, e.name, e.courseid, cm.id AS coursemoduleid, cm.availability AS availability, e.groupid, e.userid,
+                       e.modulename, e.instance, e.eventtype, e.timestart, e.timemodified, e.visible
+                FROM {event} e
+                JOIN {modules} m ON e.modulename = m.name
+                JOIN {course_modules} cm ON (cm.course = e.courseid AND cm.module = m.id AND cm.instance = e.instance)
+                WHERE (e.timestart >= :timestart OR e.timestart+e.timeduration > :timeduration)
+                      AND e.timestart <= :timeend
+                      AND e.courseid $insqlcourses
+                      AND e.modulename = 'moodleoverflow'
+                      AND m.visible = 1
+                      AND (e.name NOT LIKE '" .'0'. "' AND e.eventtype NOT LIKE '" .'0'. "' )
+                      AND (e.instance <> 0 AND e.visible = 1)
+                ORDER BY e.timestart DESC";
+
+        // Get all events.
         return $DB->get_records_sql($sql, $params);
     }
 
