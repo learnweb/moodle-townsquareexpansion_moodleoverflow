@@ -47,7 +47,7 @@ class moodleoverflow implements townsquaresupportinterface {
         global $DB;
 
         // If moodleoverflow is not installed or not activated, return empty array.
-        if (!$DB->get_record('modules', ['name' => 'forum', 'visible' => 1])) {
+        if (!$DB->get_record('modules', ['name' => 'moodleoverflow', 'visible' => 1])) {
             return [];
         }
 
@@ -66,9 +66,10 @@ class moodleoverflow implements townsquaresupportinterface {
             if ( (townsquare_filter_availability($event)) ||
                  ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
                 unset($moodleoverflowevents[$key]);
+                continue;
             }
 
-            // Add the name of the instance to events.
+            // Add the name of the instance to the event.
             if ($event->eventtype != 'post') {
                 $event->instancename = $DB->get_field($event->modulename, 'name', ['id' => $event->instance]);
             }
