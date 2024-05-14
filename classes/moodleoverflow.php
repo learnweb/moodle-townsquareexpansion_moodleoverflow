@@ -66,12 +66,6 @@ class moodleoverflow implements townsquaresupportinterface {
             if ( (townsquare_filter_availability($event)) ||
                  ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
                 unset($moodleoverflowevents[$key]);
-                continue;
-            }
-
-            // Add the name of the instance to the event.
-            if ($event->eventtype != 'post') {
-                $event->instancename = $DB->get_field($event->modulename, 'name', ['id' => $event->instance]);
             }
         }
 
@@ -126,11 +120,12 @@ class moodleoverflow implements townsquaresupportinterface {
         $params = ['timestart' => $timestart, 'timeduration' => $timestart,
                    'timeend' => $timeend, 'courses' => $courses] + $inparamscourses;
         // Set the sql statement.
-        $sql = "SELECT e.id, e.name, e.courseid, cm.id AS coursemoduleid, cm.availability AS availability, e.groupid, e.userid,
-                       e.modulename, e.instance, e.eventtype, e.timestart, e.timemodified, e.visible
+        $sql = "SELECT e.id, e.name, mo.name AS instancename, e.courseid, cm.id AS coursemoduleid, cm.availability AS availability,
+                       e.groupid, e.userid, e.modulename, e.instance, e.eventtype, e.timestart, e.timemodified, e.visible
                 FROM {event} e
                 JOIN {modules} m ON e.modulename = m.name
                 JOIN {course_modules} cm ON (cm.course = e.courseid AND cm.module = m.id AND cm.instance = e.instance)
+                JOIN {moodleoverflow} mo ON mo.id = e.instance
                 WHERE (e.timestart >= :timestart OR e.timestart+e.timeduration > :timeduration)
                       AND e.timestart <= :timeend
                       AND e.courseid $insqlcourses
