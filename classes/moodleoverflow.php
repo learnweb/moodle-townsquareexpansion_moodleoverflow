@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die;
 
 use local_townsquaresupport\townsquaresupportinterface;
 use mod_moodleoverflow\anonymous;
+use moodle_url;
 
 global $CFG;
 require_once($CFG->dirroot . '/blocks/townsquare/locallib.php');
@@ -73,10 +74,23 @@ class moodleoverflow implements townsquaresupportinterface {
             if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
                 $event->anonymous = true;
             } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
-               $event->anonymous = $event->postuserid == $event->discussionuserid;
+                $event->anonymous = $event->postuserid == $event->discussionuserid;
             } else {
                 $event->anonymous = false;
             }
+
+            // If the post is anonymous, make the author anonymous.
+            if ($event->anonymous) {
+                $event->postuserfirstname = 'anonymous';
+                $event->postuserlastname = '';
+                $event->postuserid = -1;
+            }
+
+            // Add links.
+            $event->linktopost = new moodle_url('/mod/moodleoverflow/discussion.php',
+                                 ['d' => $event->postdiscussion], 'p' . $event->postid);
+            $event->linktoauthor = $event->anonymous ? new moodle_url('') :
+                                                       new moodle_url('/user/view.php', ['id' => $event->postuserid]);
         }
 
         return $moodleoverflowevents;
