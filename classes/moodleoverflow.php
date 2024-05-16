@@ -70,27 +70,29 @@ class moodleoverflow implements townsquaresupportinterface {
                 unset($moodleoverflowevents[$key]);
             }
 
-            // Add an anonymous attribute.
-            if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
-                $event->anonymous = true;
-            } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
-                $event->anonymous = $event->postuserid == $event->discussionuserid;
-            } else {
-                $event->anonymous = false;
-            }
+            if ($event->eventtype == 'post') {
+                // Add an anonymous attribute.
+                if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
+                    $event->anonymous = true;
+                } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
+                    $event->anonymous = $event->postuserid == $event->discussionuserid;
+                } else {
+                    $event->anonymous = false;
+                }
 
-            // If the post is anonymous, make the author anonymous.
-            if ($event->anonymous) {
-                $event->postuserfirstname = 'anonymous';
-                $event->postuserlastname = '';
-                $event->postuserid = -1;
-            }
+                // If the post is anonymous, make the author anonymous.
+                if ($event->anonymous) {
+                    $event->postuserfirstname = 'anonymous';
+                    $event->postuserlastname = '';
+                    $event->postuserid = -1;
+                }
 
-            // Add links.
-            $event->linktopost = new moodle_url('/mod/moodleoverflow/discussion.php',
-                                 ['d' => $event->postdiscussion], 'p' . $event->postid);
-            $event->linktoauthor = $event->anonymous ? new moodle_url('') :
-                                                       new moodle_url('/user/view.php', ['id' => $event->postuserid]);
+                // Add links.
+                $event->linktopost = new moodle_url('/mod/moodleoverflow/discussion.php',
+                    ['d' => $event->postdiscussion], 'p' . $event->postid);
+                $event->linktoauthor = $event->anonymous ? new moodle_url('') :
+                    new moodle_url('/user/view.php', ['id' => $event->postuserid]);
+            }
         }
 
         return $moodleoverflowevents;
