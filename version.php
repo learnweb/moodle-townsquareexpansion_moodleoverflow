@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 $plugin->component = 'townsquareexpansion_moodleoverflow';
-$plugin->dependencies = ['local_townsquaresupport' => ANY_VERSION];
+$plugin->dependencies = ['local_townsquaresupport' => ANY_VERSION, 'mod_moodleoverflow' => ANY_VERSION];
 $plugin->release = '0.1.0';
 $plugin->version = 2024050900;
 $plugin->requires = 2022041900;

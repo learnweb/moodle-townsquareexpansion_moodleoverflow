@@ -26,6 +26,7 @@ namespace townsquareexpansion_moodleoverflow;
 defined('MOODLE_INTERNAL') || die;
 
 use local_townsquaresupport\townsquaresupportinterface;
+use mod_moodleoverflow\anonymous;
 
 global $CFG;
 require_once($CFG->dirroot . '/blocks/townsquare/locallib.php');
@@ -66,6 +67,15 @@ class moodleoverflow implements townsquaresupportinterface {
             if ( (townsquare_filter_availability($event)) ||
                  ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
                 unset($moodleoverflowevents[$key]);
+            }
+
+            // Add an anonymous attribute.
+            if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
+                $event->anonymous = true;
+            } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
+               $event->anonymous = $event->postuserid == $event->discussionuserid;
+            } else {
+                $event->anonymous = false;
             }
         }
 
@@ -118,7 +128,7 @@ class moodleoverflow implements townsquaresupportinterface {
         list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
 
         $params = ['timestart' => $timestart, 'timeduration' => $timestart,
-                   'timeend' => $timeend, 'courses' => $courses] + $inparamscourses;
+                   'timeend' => $timeend, 'courses' => $courses, ] + $inparamscourses;
         // Set the sql statement.
         $sql = "SELECT e.id, e.name, mo.name AS instancename, e.courseid, cm.id AS coursemoduleid, cm.availability AS availability,
                        e.groupid, e.userid, e.modulename, e.instance, e.eventtype, e.timestart, e.timemodified, e.visible
