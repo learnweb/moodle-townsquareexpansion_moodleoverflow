@@ -23,7 +23,7 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 $string['pluginname'] = 'Townsquaresubplugin for mod_moodleoverflow';
-$string['pluginname'] = 'Moodleoverflow support for townsquare block';
+$string['plugintitle'] = 'Moodleoverflow support for townsquare block';
 $string['pluginnameadding'] = "Adding a Moodleoverflow support subplugin";
 $string['pluginnameediting'] = "Editing a Moodleoverflow support subplugin";
 $string['pluginnamesummary'] = "This subplugin allows the townsquare block to show posts and events from moodleoverflow.";
