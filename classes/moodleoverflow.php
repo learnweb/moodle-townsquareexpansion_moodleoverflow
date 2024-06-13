@@ -98,6 +98,13 @@ class moodleoverflow implements townsquaresupportinterface {
         return $moodleoverflowevents;
     }
 
+    /**
+     * Builds the sql statement to get all moodleoverflow posts from the database.
+     *
+     * @param $courses
+     * @param $timestart
+     * @return array
+     */
     private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
         global $DB;
         // Prepare params for sql statement.
@@ -138,6 +145,13 @@ class moodleoverflow implements townsquaresupportinterface {
         return $DB->get_records_sql($sql, $params);
     }
 
+    /**
+     * Build the sql statement to get all other events related to moodleoverflow from the database.
+     * @param $courses
+     * @param $timestart
+     * @param $timeend
+     * @return array
+     */
     private static function get_other_events_from_db($courses, $timestart, $timeend): array {
         global $DB;
         // Prepare params for sql statement.
