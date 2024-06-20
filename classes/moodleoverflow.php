@@ -30,7 +30,7 @@ use mod_moodleoverflow\anonymous;
 use moodle_url;
 
 global $CFG;
-require_once($CFG->dirroot . '/blocks/townsquare/locallib.php');
+require_once($CFG->dirroot . '/blocks/townsquare/lib.php');
 
 /**
  * Class that implements the townsquaresupportinterface with the function to get the events from the plugin.
