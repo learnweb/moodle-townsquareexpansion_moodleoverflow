@@ -72,19 +72,12 @@ class moodleoverflow implements townsquaresupportinterface {
 
             if ($event->eventtype == 'post') {
                 // Add an anonymous attribute.
-                if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
-                    $event->anonymous = true;
-                } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
-                    $event->anonymous = $event->postuserid == $event->discussionuserid;
-                } else {
-                    $event->anonymous = false;
-                }
+                $event->anonymous = self::is_post_anonymous($event);
 
                 // If the post is anonymous, make the author anonymous.
                 if ($event->anonymous) {
                     $event->postuserfirstname = 'anonymous';
                     $event->postuserlastname = '';
-                    $event->postuserid = -1;
                 }
 
                 // Add links.
@@ -94,7 +87,6 @@ class moodleoverflow implements townsquaresupportinterface {
                     new moodle_url('/user/view.php', ['id' => $event->postuserid]);
             }
         }
-
         return $moodleoverflowevents;
     }
 
@@ -129,7 +121,8 @@ class moodleoverflow implements townsquaresupportinterface {
                 posts.parent AS postparentid,
                 posts.userid AS postuserid,
                 posts.created AS timestart,
-                posts.message AS postmessage
+                posts.message AS content,
+                posts.messageformat AS postmessageformat
             FROM {moodleoverflow_posts} posts
             JOIN {moodleoverflow_discussions} discuss ON discuss.id = posts.discussion
             JOIN {moodleoverflow} module ON module.id = discuss.moodleoverflow
@@ -160,8 +153,9 @@ class moodleoverflow implements townsquaresupportinterface {
         $params = ['timestart' => $timestart, 'timeduration' => $timestart,
                    'timeend' => $timeend, 'courses' => $courses, ] + $inparamscourses;
         // Set the sql statement.
-        $sql = "SELECT e.id, e.name, mo.name AS instancename, e.courseid, cm.id AS coursemoduleid, cm.availability AS availability,
-                       e.groupid, e.userid, e.modulename, e.instance, e.eventtype, e.timestart, e.timemodified, e.visible
+        $sql = "SELECT e.id, e.name AS content, mo.name AS instancename, e.courseid, cm.id AS coursemoduleid,
+                cm.availability AS availability, e.groupid, e.userid, e.modulename, e.instance, e.eventtype, e.timestart,
+                e.timemodified, e.visible
                 FROM {event} e
                 JOIN {modules} m ON e.modulename = m.name
                 JOIN {course_modules} cm ON (cm.course = e.courseid AND cm.module = m.id AND cm.instance = e.instance)
@@ -179,4 +173,17 @@ class moodleoverflow implements townsquaresupportinterface {
         return $DB->get_records_sql($sql, $params);
     }
 
+    /**
+     * Helper function to check if a post is anonymous. Helps to reduce the cyclomatic complexity.
+     * @param $event
+     * @return bool
+     */
+    private static function is_post_anonymous($event) {
+        if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
+            return true;
+        } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
+            return $event->postuserid == $event->discussionuserid;
+        }
+        return false;
+    }
 }
