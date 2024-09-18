@@ -26,9 +26,11 @@ namespace townsquareexpansion_moodleoverflow;
 defined('MOODLE_INTERNAL') || die;
 
 use local_townsquaresupport\townsquaresupportinterface;
+use mod_moodleoverflow\anonymous;
+use moodle_url;
 
 global $CFG;
-require_once($CFG->dirroot . '/blocks/townsquare/locallib.php');
+require_once($CFG->dirroot . '/blocks/townsquare/lib.php');
 
 /**
  * Class that implements the townsquaresupportinterface with the function to get the events from the plugin.
@@ -66,18 +68,35 @@ class moodleoverflow implements townsquaresupportinterface {
             if ( (townsquare_filter_availability($event)) ||
                  ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
                 unset($moodleoverflowevents[$key]);
-                continue;
             }
 
-            // Add the name of the instance to the event.
-            if ($event->eventtype != 'post') {
-                $event->instancename = $DB->get_field($event->modulename, 'name', ['id' => $event->instance]);
+            if ($event->eventtype == 'post') {
+                // Add an anonymous attribute.
+                $event->anonymous = self::is_post_anonymous($event);
+
+                // If the post is anonymous, make the author anonymous.
+                if ($event->anonymous) {
+                    $event->postuserfirstname = 'anonymous';
+                    $event->postuserlastname = '';
+                }
+
+                // Add links.
+                $event->linktopost = new moodle_url('/mod/moodleoverflow/discussion.php',
+                    ['d' => $event->postdiscussion], 'p' . $event->postid);
+                $event->linktoauthor = $event->anonymous ? new moodle_url('') :
+                    new moodle_url('/user/view.php', ['id' => $event->postuserid]);
             }
         }
-
         return $moodleoverflowevents;
     }
 
+    /**
+     * Builds the sql statement to get all moodleoverflow posts from the database.
+     *
+     * @param $courses
+     * @param $timestart
+     * @return array
+     */
     private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
         global $DB;
         // Prepare params for sql statement.
@@ -102,7 +121,8 @@ class moodleoverflow implements townsquaresupportinterface {
                 posts.parent AS postparentid,
                 posts.userid AS postuserid,
                 posts.created AS timestart,
-                posts.message AS postmessage
+                posts.message AS content,
+                posts.messageformat AS postmessageformat
             FROM {moodleoverflow_posts} posts
             JOIN {moodleoverflow_discussions} discuss ON discuss.id = posts.discussion
             JOIN {moodleoverflow} module ON module.id = discuss.moodleoverflow
@@ -118,19 +138,28 @@ class moodleoverflow implements townsquaresupportinterface {
         return $DB->get_records_sql($sql, $params);
     }
 
+    /**
+     * Build the sql statement to get all other events related to moodleoverflow from the database.
+     * @param $courses
+     * @param $timestart
+     * @param $timeend
+     * @return array
+     */
     private static function get_other_events_from_db($courses, $timestart, $timeend): array {
         global $DB;
         // Prepare params for sql statement.
         list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
 
         $params = ['timestart' => $timestart, 'timeduration' => $timestart,
-                   'timeend' => $timeend, 'courses' => $courses] + $inparamscourses;
+                   'timeend' => $timeend, 'courses' => $courses, ] + $inparamscourses;
         // Set the sql statement.
-        $sql = "SELECT e.id, e.name, e.courseid, cm.id AS coursemoduleid, cm.availability AS availability, e.groupid, e.userid,
-                       e.modulename, e.instance, e.eventtype, e.timestart, e.timemodified, e.visible
+        $sql = "SELECT e.id, e.name AS content, mo.name AS instancename, e.courseid, cm.id AS coursemoduleid,
+                cm.availability AS availability, e.groupid, e.userid, e.modulename, e.instance, e.eventtype, e.timestart,
+                e.timemodified, e.visible
                 FROM {event} e
                 JOIN {modules} m ON e.modulename = m.name
                 JOIN {course_modules} cm ON (cm.course = e.courseid AND cm.module = m.id AND cm.instance = e.instance)
+                JOIN {moodleoverflow} mo ON mo.id = e.instance
                 WHERE (e.timestart >= :timestart OR e.timestart+e.timeduration > :timeduration)
                       AND e.timestart <= :timeend
                       AND e.courseid $insqlcourses
@@ -144,4 +173,17 @@ class moodleoverflow implements townsquaresupportinterface {
         return $DB->get_records_sql($sql, $params);
     }
 
+    /**
+     * Helper function to check if a post is anonymous. Helps to reduce the cyclomatic complexity.
+     * @param $event
+     * @return bool
+     */
+    private static function is_post_anonymous($event) {
+        if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
+            return true;
+        } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
+            return $event->postuserid == $event->discussionuserid;
+        }
+        return false;
+    }
 }
