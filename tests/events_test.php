@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,8 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Unit tests for the moodleoverflow townsquareexpansion
@@ -41,11 +40,14 @@ use stdClass;
  */
 final class events_test extends \advanced_testcase {
 
-    /** @var stdClass  */
+    /** @var stdClass data for testing*/
     private stdClass $testdata;
+
+    /** @var moodleoverflow Class for moodleoverflow event collection */
     private moodleoverflow $moodleoverflowevents;
 
     /**
+     * Setup the test environment.
      * @throws dml_exception
      */
     public function setUp(): void {
@@ -55,15 +57,11 @@ final class events_test extends \advanced_testcase {
         $this->moodleoverflowevents = new moodleoverflow();
         $this->resetAfterTest();
 
-        // Check if moodleoverflow is available:
+        // Check if moodleoverflow is available.
         if (!$DB->get_record('modules', ['name' => 'moodleoverflow', 'visible' => 1])) {
             $this->markTestSkipped('Moodleoverflow is not installed or not activated.');
         }
-        $this->helper_course_set_uo();
-    }
-
-    public function tearDown(): void {
-        parent::tearDown();
+        $this->helper_course_set_up();
     }
 
     /**
@@ -235,7 +233,10 @@ final class events_test extends \advanced_testcase {
 
     // Helper functions.
 
-    private function helper_course_set_uo(): void {
+    /**
+     * Helper function to create courses and moodleoverflows.
+     */
+    private function helper_course_set_up(): void {
         $datagenerator = $this->getDataGenerator();
         // Create two new courses.
         $this->testdata->course1 = $datagenerator->create_course();
