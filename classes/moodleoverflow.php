@@ -99,6 +99,7 @@ class moodleoverflow implements townsquaresupportinterface {
      */
     private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
         global $DB;
+
         // Prepare params for sql statement.
         list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
         $params = ['courses' => $courses, 'timestart' => $timestart] + $inparamscourses;
