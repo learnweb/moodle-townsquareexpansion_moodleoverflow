@@ -29,8 +29,6 @@ use local_townsquaresupport\townsquaresupportinterface;
 use mod_moodleoverflow\anonymous;
 use moodle_url;
 
-//global $CFG;
-//require_once($CFG->dirroot . '/blocks/townsquare/lib.php');
 require_once(__DIR__.'/../../../../../blocks/townsquare/lib.php');
 
 /**
