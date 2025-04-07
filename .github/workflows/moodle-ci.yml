@@ -75,11 +75,11 @@ jobs:
       - name: Debug plugin locations
         run: |
           echo "Moodle dirroot:"
-          find moodle-plugin-ci -maxdepth 2
+          find /home/runner/work -maxdepth 2
           echo "Blocks:"
-          find moodle-plugin-ci/blocks -maxdepth 2
+          find /home/runner/work/blocks -maxdepth 2
           echo "Local:"
-          find moodle-plugin-ci/local -maxdepth 3
+          find /home/runner/work/local -maxdepth 3
 
       - name: PHP Lint
         if: ${{ always() }}
