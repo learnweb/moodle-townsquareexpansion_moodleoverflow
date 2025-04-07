@@ -75,11 +75,7 @@ jobs:
       - name: Debug plugin locations
         run: |
           echo "Moodle dirroot:"
-          find /home/runner/work -maxdepth 2
-          echo "Blocks:"
-          find /home/runner/work/blocks -maxdepth 2
-          echo "Local:"
-          find /home/runner/work/local -maxdepth 3
+          find /home/runner/work -maxdepth 5
 
       - name: PHP Lint
         if: ${{ always() }}
