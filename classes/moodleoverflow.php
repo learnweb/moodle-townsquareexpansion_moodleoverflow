@@ -25,13 +25,12 @@ namespace townsquareexpansion_moodleoverflow;
 
 defined('MOODLE_INTERNAL') || die;
 
-use local_townsquaresupport\townsquaresupportinterface;
-use mod_moodleoverflow\anonymous;
-use moodle_url;
-
 global $CFG;
 require_once($CFG->dirroot . '/blocks/townsquare/lib.php');
 
+use local_townsquaresupport\townsquaresupportinterface;
+use mod_moodleoverflow\anonymous;
+use moodle_url;
 /**
  * Class that implements the townsquaresupportinterface with the function to get the events from the plugin.
  *
@@ -99,6 +98,7 @@ class moodleoverflow implements townsquaresupportinterface {
      */
     private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
         global $DB;
+
         // Prepare params for sql statement.
         list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
         $params = ['courses' => $courses, 'timestart' => $timestart] + $inparamscourses;
