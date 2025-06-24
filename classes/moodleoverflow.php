@@ -92,8 +92,8 @@ class moodleoverflow implements townsquaresupportinterface {
     /**
      * Builds the sql statement to get all moodleoverflow posts from the database.
      *
-     * @param $courses
-     * @param $timestart
+     * @param array $courses
+     * @param int $timestart
      * @return array
      */
     private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
@@ -140,9 +140,9 @@ class moodleoverflow implements townsquaresupportinterface {
 
     /**
      * Build the sql statement to get all other events related to moodleoverflow from the database.
-     * @param $courses
-     * @param $timestart
-     * @param $timeend
+     * @param array $courses
+     * @param int $timestart
+     * @param int $timeend
      * @return array
      */
     private static function get_other_events_from_db($courses, $timestart, $timeend): array {
@@ -175,7 +175,7 @@ class moodleoverflow implements townsquaresupportinterface {
 
     /**
      * Helper function to check if a post is anonymous. Helps to reduce the cyclomatic complexity.
-     * @param $event
+     * @param object $event
      * @return bool
      */
     private static function is_post_anonymous($event) {
