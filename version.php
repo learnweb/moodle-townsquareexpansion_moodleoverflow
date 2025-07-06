@@ -23,9 +23,14 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
+
+$plugin->version = 2025070600;
+$plugin->requires = 2022112819; // Require Moodle 4.1
+$plugin->supported = [401, 404, 405, 500];
 $plugin->component = 'townsquareexpansion_moodleoverflow';
-$plugin->dependencies = ['local_townsquaresupport' => ANY_VERSION, 'mod_moodleoverflow' => ANY_VERSION];
-$plugin->release = '0.1.0';
-$plugin->version = 2025062400;
-$plugin->requires = 2022041900;
 $plugin->maturity = MATURITY_ALPHA;
+$plugin->release = '0.1.0';
+$plugin->dependencies = [
+    'local_townsquaresupport' => ANY_VERSION,
+    'mod_moodleoverflow' => ANY_VERSION,
+];
