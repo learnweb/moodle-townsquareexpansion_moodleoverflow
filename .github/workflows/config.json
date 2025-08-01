@@ -1,0 +1,7 @@
+{
+  "additional_plugins": [
+    "learnweb/moodle-mod_moodleoverflow",
+    "learnweb/moodle-block_townsquare",
+    "learnweb/moodle-local_townsquaresupport"
+  ]
+}
