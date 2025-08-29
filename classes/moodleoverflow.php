@@ -179,7 +179,7 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param object $event
      * @return bool
      */
-    private static function is_post_anonymous($event) {
+    private static function is_post_anonymous(object $event) {
         if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
             return true;
         } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
