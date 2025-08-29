@@ -146,7 +146,7 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param int $timeend
      * @return array
      */
-    private static function get_other_events_from_db($courses, $timestart, $timeend): array {
+    private static function get_other_events_from_db(array $courses, int $timestart, int $timeend): array {
         global $DB;
         // Prepare params for sql statement.
         list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
