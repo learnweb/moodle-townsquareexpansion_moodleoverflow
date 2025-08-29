@@ -62,7 +62,7 @@ class moodleoverflow implements townsquaresupportinterface {
                                              self::get_other_events_from_db($courses, $timestart, $timeend));
 
         // Filter out events that are irrelevant for the user.
-        // Irrelevant are events/posts from unavailable moodleoverflows or activity completion notifications, that are completed.
+        // Irrelevant are events/posts from unavailable moodleoverflows or activity completion notifications that are completed.
         foreach ($moodleoverflowevents as $key => $event) {
             if ( (townsquare_filter_availability($event)) ||
                  ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
