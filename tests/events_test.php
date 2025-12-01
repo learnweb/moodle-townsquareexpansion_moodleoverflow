@@ -39,7 +39,6 @@ use stdClass;
  * @covers \townsquareexpansion_moodleoverflow\moodleoverflow::get_events
  */
 final class events_test extends \advanced_testcase {
-
     /** @var stdClass data for testing*/
     private stdClass $testdata;
 
@@ -85,7 +84,7 @@ final class events_test extends \advanced_testcase {
         }
 
         $this->assertTrue($result);
-        $this->assertEquals(4 , count($posts));
+        $this->assertEquals(4, count($posts));
     }
 
     /**
@@ -202,7 +201,6 @@ final class events_test extends \advanced_testcase {
         // Test case 2: The teacherpost and studentpost are in full anonymous mode (all posts are anonymous).
         $this->assertEquals(true, $secondteacherpost->anonymoussetting == \mod_moodleoverflow\anonymous::EVERYTHING_ANONYMOUS);
         $this->assertEquals(true, $secondstudentpost->anonymoussetting == \mod_moodleoverflow\anonymous::EVERYTHING_ANONYMOUS);
-
     }
 
     /**
@@ -258,16 +256,24 @@ final class events_test extends \advanced_testcase {
         $modoverflowgenerator = $datagenerator->get_plugin_generator('mod_moodleoverflow');
 
         $this->testdata->moodleoverflow1 = $datagenerator->create_module('moodleoverflow', $course1location);
-        $this->testdata->mdiscussion1 = $modoverflowgenerator->post_to_forum($this->testdata->moodleoverflow1,
-            $this->testdata->teacher);
-        $this->testdata->answer1 = $modoverflowgenerator->reply_to_post($this->testdata->mdiscussion1[1],
-            $this->testdata->student1);
+        $this->testdata->mdiscussion1 = $modoverflowgenerator->post_to_forum(
+            $this->testdata->moodleoverflow1,
+            $this->testdata->teacher
+        );
+        $this->testdata->answer1 = $modoverflowgenerator->reply_to_post(
+            $this->testdata->mdiscussion1[1],
+            $this->testdata->student1
+        );
 
         $this->testdata->moodleoverflow2 = $datagenerator->create_module('moodleoverflow', $course2location);
-        $this->testdata->mdiscussion2 = $modoverflowgenerator->post_to_forum($this->testdata->moodleoverflow2,
-            $this->testdata->teacher);
-        $this->testdata->answer2 = $modoverflowgenerator->reply_to_post($this->testdata->mdiscussion2[1],
-            $this->testdata->student2);
+        $this->testdata->mdiscussion2 = $modoverflowgenerator->post_to_forum(
+            $this->testdata->moodleoverflow2,
+            $this->testdata->teacher
+        );
+        $this->testdata->answer2 = $modoverflowgenerator->reply_to_post(
+            $this->testdata->mdiscussion2[1],
+            $this->testdata->student2
+        );
     }
 
     /**

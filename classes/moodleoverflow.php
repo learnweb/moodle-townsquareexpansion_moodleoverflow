@@ -42,7 +42,6 @@ use moodle_url;
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodleoverflow implements townsquaresupportinterface {
-
     /**
      * Function from the interface.
      * @return array
@@ -63,14 +62,18 @@ class moodleoverflow implements townsquaresupportinterface {
         $timeend = townsquare_get_timeend();
 
         // Get all moodleoverflow posts and events.
-        $moodleoverflowevents = array_merge( self::get_moodleoverflowposts_from_db($courses, $timestart),
-                                             self::get_other_events_from_db($courses, $timestart, $timeend));
+        $moodleoverflowevents = array_merge(
+            self::get_moodleoverflowposts_from_db($courses, $timestart),
+            self::get_other_events_from_db($courses, $timestart, $timeend)
+        );
 
         // Filter out events that are irrelevant for the user.
         // Irrelevant are events/posts from unavailable moodleoverflows or activity completion notifications, that are completed.
         foreach ($moodleoverflowevents as $key => $event) {
-            if ( (townsquare_filter_availability($event)) ||
-                 ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
+            if (
+                (townsquare_filter_availability($event)) ||
+                 ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))
+            ) {
                 unset($moodleoverflowevents[$key]);
             }
 
@@ -85,8 +88,11 @@ class moodleoverflow implements townsquaresupportinterface {
                 }
 
                 // Add links.
-                $event->linktopost = new moodle_url('/mod/moodleoverflow/discussion.php',
-                    ['d' => $event->postdiscussion], 'p' . $event->postid);
+                $event->linktopost = new moodle_url(
+                    '/mod/moodleoverflow/discussion.php',
+                    ['d' => $event->postdiscussion],
+                    'p' . $event->postid
+                );
                 $event->linktoauthor = $event->anonymous ? new moodle_url('') :
                     new moodle_url('/user/view.php', ['id' => $event->postuserid]);
             }
@@ -106,7 +112,7 @@ class moodleoverflow implements townsquaresupportinterface {
         global $DB;
 
         // Prepare params for sql statement.
-        list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
+        [$insqlcourses, $inparamscourses] = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
         $params = ['courses' => $courses, 'timestart' => $timestart] + $inparamscourses;
 
         $sql = "SELECT (ROW_NUMBER() OVER (ORDER BY posts.id)) AS row_num,
@@ -155,7 +161,7 @@ class moodleoverflow implements townsquaresupportinterface {
     private static function get_other_events_from_db(array $courses, int $timestart, int $timeend): array {
         global $DB;
         // Prepare params for sql statement.
-        list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
+        [$insqlcourses, $inparamscourses] = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
 
         $params = ['timestart' => $timestart, 'timeduration' => $timestart,
                    'timeend' => $timeend, 'courses' => $courses, ] + $inparamscourses;
@@ -172,7 +178,7 @@ class moodleoverflow implements townsquaresupportinterface {
                       AND e.courseid $insqlcourses
                       AND e.modulename = 'moodleoverflow'
                       AND m.visible = 1
-                      AND (e.name NOT LIKE '" .'0'. "' AND e.eventtype NOT LIKE '" .'0'. "' )
+                      AND (e.name NOT LIKE '" . '0' . "' AND e.eventtype NOT LIKE '" . '0' . "' )
                       AND (e.instance <> 0 AND e.visible = 1)
                 ORDER BY e.timestart DESC";
 
