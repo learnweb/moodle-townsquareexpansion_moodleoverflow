@@ -25,8 +25,10 @@
 namespace townsquareexpansion_moodleoverflow;
 
 use coding_exception;
+use core\exception\moodle_exception;
 use dml_exception;
 use Exception;
+use mod_moodleoverflow\anonymous;
 use stdClass;
 
 /**
@@ -39,7 +41,6 @@ use stdClass;
  * @covers \townsquareexpansion_moodleoverflow\moodleoverflow::get_events
  */
 final class events_test extends \advanced_testcase {
-
     /** @var stdClass data for testing*/
     private stdClass $testdata;
 
@@ -68,6 +69,8 @@ final class events_test extends \advanced_testcase {
      * Test, if post events are sorted correctly.
      * Post should be sorted by the time they were created in descending order (newest post first).
      * @return void
+     * @throws dml_exception
+     * @throws moodle_exception
      */
     public function test_sortorder(): void {
         $this->setUser($this->testdata->teacher);
@@ -85,13 +88,14 @@ final class events_test extends \advanced_testcase {
         }
 
         $this->assertTrue($result);
-        $this->assertEquals(4 , count($posts));
+        $this->assertEquals(4, count($posts));
     }
 
     /**
      * Test, if the post events are processed correctly if the moodleoverflow module is not installed.
      * @return void
      * @throws dml_exception
+     * @throws moodle_exception
      */
     public function test_disabled_moodleoverflow(): void {
         global $DB;
@@ -110,6 +114,7 @@ final class events_test extends \advanced_testcase {
      * Test, if the post events are processed correctly if the course disappears.
      * @return void
      * @throws dml_exception
+     * @throws moodle_exception
      */
     public function test_course_deleted(): void {
         global $DB;
@@ -136,6 +141,7 @@ final class events_test extends \advanced_testcase {
      * Test, if the users see only posts of courses they're enrolled in.
      * @return void
      * @throws coding_exception
+     * @throws moodle_exception
      */
     public function test_user_views(): void {
         // Test case 1: teacher view.
@@ -160,6 +166,7 @@ final class events_test extends \advanced_testcase {
     /**
      * Test, if data in moodleoverflow posts is processed correctly when the moodleoverflow is anonymous.
      * @return void
+     * @throws Exception
      */
     public function test_anonymous(): void {
         // Set the first moodleoverflow to partially anonymous and the second to fully anonymous.
@@ -196,20 +203,18 @@ final class events_test extends \advanced_testcase {
         }
 
         // Test case 1: The teacherpost and studentpost are in partial anonymous mode (only questions are anonymous).
-        $this->assertEquals(true, $firstteacherpost->anonymoussetting == \mod_moodleoverflow\anonymous::QUESTION_ANONYMOUS);
-        $this->assertEquals(true, $firststudentpost->anonymoussetting == \mod_moodleoverflow\anonymous::QUESTION_ANONYMOUS);
+        $this->assertTrue($firstteacherpost->anonymoussetting == anonymous::QUESTION_ANONYMOUS);
+        $this->assertTrue($firststudentpost->anonymoussetting == anonymous::QUESTION_ANONYMOUS);
 
         // Test case 2: The teacherpost and studentpost are in full anonymous mode (all posts are anonymous).
-        $this->assertEquals(true, $secondteacherpost->anonymoussetting == \mod_moodleoverflow\anonymous::EVERYTHING_ANONYMOUS);
-        $this->assertEquals(true, $secondstudentpost->anonymoussetting == \mod_moodleoverflow\anonymous::EVERYTHING_ANONYMOUS);
-
+        $this->assertTrue($secondteacherpost->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS);
+        $this->assertTrue($secondstudentpost->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS);
     }
 
     /**
      * Test, if posts are not shown in townsquare when a moodleoverflow is hidden.
      * @return void
-     * @throws coding_exception
-     * @throws dml_exception
+     * @throws coding_exception|dml_exception|moodle_exception
      */
     public function test_hidden(): void {
         global $DB;
@@ -258,16 +263,24 @@ final class events_test extends \advanced_testcase {
         $modoverflowgenerator = $datagenerator->get_plugin_generator('mod_moodleoverflow');
 
         $this->testdata->moodleoverflow1 = $datagenerator->create_module('moodleoverflow', $course1location);
-        $this->testdata->mdiscussion1 = $modoverflowgenerator->post_to_forum($this->testdata->moodleoverflow1,
-            $this->testdata->teacher);
-        $this->testdata->answer1 = $modoverflowgenerator->reply_to_post($this->testdata->mdiscussion1[1],
-            $this->testdata->student1);
+        $this->testdata->mdiscussion1 = $modoverflowgenerator->post_to_forum(
+            $this->testdata->moodleoverflow1,
+            $this->testdata->teacher
+        );
+        $this->testdata->answer1 = $modoverflowgenerator->reply_to_post(
+            $this->testdata->mdiscussion1[1],
+            $this->testdata->student1
+        );
 
         $this->testdata->moodleoverflow2 = $datagenerator->create_module('moodleoverflow', $course2location);
-        $this->testdata->mdiscussion2 = $modoverflowgenerator->post_to_forum($this->testdata->moodleoverflow2,
-            $this->testdata->teacher);
-        $this->testdata->answer2 = $modoverflowgenerator->reply_to_post($this->testdata->mdiscussion2[1],
-            $this->testdata->student2);
+        $this->testdata->mdiscussion2 = $modoverflowgenerator->post_to_forum(
+            $this->testdata->moodleoverflow2,
+            $this->testdata->teacher
+        );
+        $this->testdata->answer2 = $modoverflowgenerator->reply_to_post(
+            $this->testdata->mdiscussion2[1],
+            $this->testdata->student2
+        );
     }
 
     /**
@@ -276,7 +289,7 @@ final class events_test extends \advanced_testcase {
      * @param array $enrolledcourses
      * @return bool
      */
-    private function check_postcourses($posts, $enrolledcourses): bool {
+    private function check_postcourses(array $posts, array $enrolledcourses): bool {
         foreach ($posts as $post) {
             $postcourseid = $post->courseid;
 
@@ -302,7 +315,7 @@ final class events_test extends \advanced_testcase {
      * @param int $anonymoussetting The type of anonymous moodleoverflow.
      * @throws Exception
      */
-    private function make_anonymous($moodleoverflow, $anonymoussetting): void {
+    private function make_anonymous(object $moodleoverflow, int $anonymoussetting): void {
         global $DB;
         if ($anonymoussetting == 1 || $anonymoussetting == 2) {
             $moodleoverflow->anonymous = $anonymoussetting;

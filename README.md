@@ -27,7 +27,8 @@ Check the plugin validation report and finish the installation.
 Installing manually
 The plugin can be also installed by putting the contents of this directory to
 
-{your/moodle/dirroot}/local/townsquaresupport/townsquareexpansion/moodleoverflow
+`{your/moodle/dirroot}/local/townsquaresupport/townsquareexpansion/moodleoverflow`
+
 Afterwards, log in to your Moodle site as an admin and go to Site administration > Notifications to complete the installation.
 
 Alternatively, you can run

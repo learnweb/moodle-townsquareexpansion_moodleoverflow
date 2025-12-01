@@ -28,6 +28,9 @@ defined('MOODLE_INTERNAL') || die;
 global $CFG;
 require_once($CFG->dirroot . '/blocks/townsquare/lib.php');
 
+use coding_exception;
+use core\exception\moodle_exception;
+use dml_exception;
 use local_townsquaresupport\townsquaresupportinterface;
 use mod_moodleoverflow\anonymous;
 use moodle_url;
@@ -39,10 +42,11 @@ use moodle_url;
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodleoverflow implements townsquaresupportinterface {
-
     /**
      * Function from the interface.
      * @return array
+     * @throws dml_exception
+     * @throws moodle_exception
      */
     public static function get_events(): array {
         global $DB;
@@ -53,19 +57,23 @@ class moodleoverflow implements townsquaresupportinterface {
         }
 
         // Get important parameters directly from townsquare.
-        $courses = townsquare_get_courses();
-        $timestart = townsquare_get_timestart();
-        $timeend = townsquare_get_timeend();
+        $courses = block_townsquare_get_courses();
+        $timestart = block_townsquare_get_timestart();
+        $timeend = block_townsquare_get_timeend();
 
         // Get all moodleoverflow posts and events.
-        $moodleoverflowevents = array_merge( self::get_moodleoverflowposts_from_db($courses, $timestart),
-                                             self::get_other_events_from_db($courses, $timestart, $timeend));
+        $moodleoverflowevents = array_merge(
+            self::get_moodleoverflowposts_from_db($courses, $timestart),
+            self::get_other_events_from_db($courses, $timestart, $timeend)
+        );
 
         // Filter out events that are irrelevant for the user.
         // Irrelevant are events/posts from unavailable moodleoverflows or activity completion notifications, that are completed.
         foreach ($moodleoverflowevents as $key => $event) {
-            if ( (townsquare_filter_availability($event)) ||
-                 ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))) {
+            if (
+                (townsquare_filter_availability($event)) ||
+                 ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))
+            ) {
                 unset($moodleoverflowevents[$key]);
             }
 
@@ -80,8 +88,11 @@ class moodleoverflow implements townsquaresupportinterface {
                 }
 
                 // Add links.
-                $event->linktopost = new moodle_url('/mod/moodleoverflow/discussion.php',
-                    ['d' => $event->postdiscussion], 'p' . $event->postid);
+                $event->linktopost = new moodle_url(
+                    '/mod/moodleoverflow/discussion.php',
+                    ['d' => $event->postdiscussion],
+                    'p' . $event->postid
+                );
                 $event->linktoauthor = $event->anonymous ? new moodle_url('') :
                     new moodle_url('/user/view.php', ['id' => $event->postuserid]);
             }
@@ -95,12 +106,13 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param array $courses
      * @param int $timestart
      * @return array
+     * @throws dml_exception|coding_exception
      */
-    private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
+    private static function get_moodleoverflowposts_from_db(array $courses, int $timestart): array {
         global $DB;
 
         // Prepare params for sql statement.
-        list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
+        [$insqlcourses, $inparamscourses] = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
         $params = ['courses' => $courses, 'timestart' => $timestart] + $inparamscourses;
 
         $sql = "SELECT (ROW_NUMBER() OVER (ORDER BY posts.id)) AS row_num,
@@ -144,11 +156,12 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param int $timestart
      * @param int $timeend
      * @return array
+     * @throws dml_exception|coding_exception
      */
-    private static function get_other_events_from_db($courses, $timestart, $timeend): array {
+    private static function get_other_events_from_db(array $courses, int $timestart, int $timeend): array {
         global $DB;
         // Prepare params for sql statement.
-        list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
+        [$insqlcourses, $inparamscourses] = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
 
         $params = ['timestart' => $timestart, 'timeduration' => $timestart,
                    'timeend' => $timeend, 'courses' => $courses, ] + $inparamscourses;
@@ -165,7 +178,7 @@ class moodleoverflow implements townsquaresupportinterface {
                       AND e.courseid $insqlcourses
                       AND e.modulename = 'moodleoverflow'
                       AND m.visible = 1
-                      AND (e.name NOT LIKE '" .'0'. "' AND e.eventtype NOT LIKE '" .'0'. "' )
+                      AND (e.name NOT LIKE '" . '0' . "' AND e.eventtype NOT LIKE '" . '0' . "' )
                       AND (e.instance <> 0 AND e.visible = 1)
                 ORDER BY e.timestart DESC";
 
@@ -178,12 +191,9 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param object $event
      * @return bool
      */
-    private static function is_post_anonymous($event) {
-        if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
-            return true;
-        } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
-            return $event->postuserid == $event->discussionuserid;
-        }
-        return false;
+    private static function is_post_anonymous(object $event): bool {
+        $discussion = (object) ['userid' => $event->discussionuserid];
+        $moodleoverflow = (object) ['anonymous' => $event->anonymoussetting];
+        return anonymous::is_post_anonymous($discussion, $moodleoverflow, $event->postuserid);
     }
 }
