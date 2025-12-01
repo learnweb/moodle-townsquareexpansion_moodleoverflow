@@ -192,11 +192,8 @@ class moodleoverflow implements townsquaresupportinterface {
      * @return bool
      */
     private static function is_post_anonymous(object $event): bool {
-        if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
-            return true;
-        } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
-            return $event->postuserid == $event->discussionuserid;
-        }
-        return false;
+        $discussion = (object) ['userid' => $event->discussionuserid];
+        $moodleoverflow = (object) ['anonymous' => $event->anonymoussetting];
+        return anonymous::is_post_anonymous($discussion, $moodleoverflow, $event->postuserid);
     }
 }
