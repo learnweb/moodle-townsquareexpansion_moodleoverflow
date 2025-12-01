@@ -28,6 +28,9 @@ defined('MOODLE_INTERNAL') || die;
 global $CFG;
 require_once($CFG->dirroot . '/blocks/townsquare/lib.php');
 
+use coding_exception;
+use core\exception\moodle_exception;
+use dml_exception;
 use local_townsquaresupport\townsquaresupportinterface;
 use mod_moodleoverflow\anonymous;
 use moodle_url;
@@ -43,6 +46,8 @@ class moodleoverflow implements townsquaresupportinterface {
     /**
      * Function from the interface.
      * @return array
+     * @throws dml_exception
+     * @throws moodle_exception
      */
     public static function get_events(): array {
         global $DB;
@@ -95,8 +100,9 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param array $courses
      * @param int $timestart
      * @return array
+     * @throws dml_exception|coding_exception
      */
-    private static function get_moodleoverflowposts_from_db($courses, $timestart): array {
+    private static function get_moodleoverflowposts_from_db(array $courses, int $timestart): array {
         global $DB;
 
         // Prepare params for sql statement.
@@ -144,8 +150,9 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param int $timestart
      * @param int $timeend
      * @return array
+     * @throws dml_exception|coding_exception
      */
-    private static function get_other_events_from_db($courses, $timestart, $timeend): array {
+    private static function get_other_events_from_db(array $courses, int $timestart, int $timeend): array {
         global $DB;
         // Prepare params for sql statement.
         list($insqlcourses, $inparamscourses) = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
@@ -178,7 +185,7 @@ class moodleoverflow implements townsquaresupportinterface {
      * @param object $event
      * @return bool
      */
-    private static function is_post_anonymous($event) {
+    private static function is_post_anonymous(object $event): bool {
         if ($event->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS) {
             return true;
         } else if ($event->anonymoussetting == anonymous::QUESTION_ANONYMOUS) {
