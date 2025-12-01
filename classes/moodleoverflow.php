@@ -57,9 +57,9 @@ class moodleoverflow implements townsquaresupportinterface {
         }
 
         // Get important parameters directly from townsquare.
-        $courses = townsquare_get_courses();
-        $timestart = townsquare_get_timestart();
-        $timeend = townsquare_get_timeend();
+        $courses = block_townsquare_get_courses();
+        $timestart = block_townsquare_get_timestart();
+        $timeend = block_townsquare_get_timeend();
 
         // Get all moodleoverflow posts and events.
         $moodleoverflowevents = array_merge(
