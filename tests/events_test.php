@@ -28,7 +28,6 @@ use coding_exception;
 use core\exception\moodle_exception;
 use dml_exception;
 use Exception;
-use mod_moodleoverflow\anonymous;
 use stdClass;
 
 /**
@@ -202,13 +201,13 @@ final class events_test extends \advanced_testcase {
             }
         }
 
-        // Test case 1: The teacherpost and studentpost are in partial anonymous mode (only questions are anonymous).
-        $this->assertTrue($firstteacherpost->anonymoussetting == anonymous::QUESTION_ANONYMOUS);
-        $this->assertTrue($firststudentpost->anonymoussetting == anonymous::QUESTION_ANONYMOUS);
+        // Test case 1: Only questions are anonymous: the teacher's question is, the student's answer is not.
+        $this->assertTrue($firstteacherpost->anonymous);
+        $this->assertFalse($firststudentpost->anonymous);
 
-        // Test case 2: The teacherpost and studentpost are in full anonymous mode (all posts are anonymous).
-        $this->assertTrue($secondteacherpost->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS);
-        $this->assertTrue($secondstudentpost->anonymoussetting == anonymous::EVERYTHING_ANONYMOUS);
+        // Test case 2: Everything is anonymous.
+        $this->assertTrue($secondteacherpost->anonymous);
+        $this->assertTrue($secondstudentpost->anonymous);
     }
 
     /**
@@ -234,6 +233,29 @@ final class events_test extends \advanced_testcase {
             }
         }
         $this->assertTrue($result);
+    }
+
+    /**
+     * Test, if posts that are not reviewed yet are not shown in townsquare.
+     * @return void
+     * @throws dml_exception|moodle_exception
+     */
+    public function test_not_reviewed(): void {
+        global $DB;
+        // Mark the answer of the first student as not reviewed.
+        $DB->set_field('moodleoverflow_posts', 'reviewed', 0, ['id' => $this->testdata->answer1->id]);
+
+        // Test case 1: the teacher does not see the post.
+        $this->setUser($this->testdata->teacher);
+        $posts = $this->moodleoverflowevents->get_events();
+        $this->assertNotContains($this->testdata->answer1->id, array_map('intval', array_column($posts, 'postid')));
+        $this->assertEquals(3, count($posts));
+
+        // Test case 2: the author does not see the post either.
+        $this->setUser($this->testdata->student1);
+        $posts = $this->moodleoverflowevents->get_events();
+        $this->assertNotContains($this->testdata->answer1->id, array_map('intval', array_column($posts, 'postid')));
+        $this->assertEquals(1, count($posts));
     }
 
     // Helper functions.

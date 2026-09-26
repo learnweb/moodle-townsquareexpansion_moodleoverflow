@@ -33,7 +33,9 @@ use core\exception\moodle_exception;
 use dml_exception;
 use local_townsquaresupport\townsquaresupportinterface;
 use mod_moodleoverflow\anonymous;
+use mod_moodleoverflow\local\models\moodleoverflow as moodleoverflow_model;
 use moodle_url;
+
 /**
  * Class that implements the townsquaresupportinterface with the function to get the events from the plugin.
  *
@@ -52,7 +54,7 @@ class moodleoverflow implements townsquaresupportinterface {
         global $DB;
 
         // If moodleoverflow is not installed or not activated, return empty array.
-        if (!$DB->get_record('modules', ['name' => 'moodleoverflow', 'visible' => 1])) {
+        if (!$module = $DB->get_record('modules', ['name' => 'moodleoverflow', 'visible' => 1])) {
             return [];
         }
 
@@ -63,89 +65,95 @@ class moodleoverflow implements townsquaresupportinterface {
 
         // Get all moodleoverflow posts and events.
         $moodleoverflowevents = array_merge(
-            self::get_moodleoverflowposts_from_db($courses, $timestart),
+            self::get_moodleoverflowposts_from_db($courses, $timestart, $module->id),
             self::get_other_events_from_db($courses, $timestart, $timeend)
         );
 
         // Filter out events that are irrelevant for the user.
         // Irrelevant are events/posts from unavailable moodleoverflows or activity completion notifications, that are completed.
+        $instances = [];
         foreach ($moodleoverflowevents as $key => $event) {
             if (
-                (townsquare_filter_availability($event)) ||
-                 ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))
+                townsquare_filter_availability($event) ||
+                ($event->eventtype == 'expectcompletionon' && townsquare_filter_activitycompletions($event))
             ) {
                 unset($moodleoverflowevents[$key]);
+                continue;
             }
 
-            if ($event->eventtype == 'post') {
-                // Add an anonymous attribute.
-                $event->anonymous = self::is_post_anonymous($event);
-
-                // If the post is anonymous, make the author anonymous.
-                if ($event->anonymous) {
-                    $event->postuserfirstname = 'anonymous';
-                    $event->postuserlastname = '';
-                }
-
-                // Add links.
-                $event->linktopost = new moodle_url(
-                    '/mod/moodleoverflow/discussion.php',
-                    ['d' => $event->postdiscussion],
-                    'p' . $event->postid
-                );
-                $event->linktoauthor = $event->anonymous ? new moodle_url('') :
-                    new moodle_url('/user/view.php', ['id' => $event->postuserid]);
+            if ($event->eventtype != 'post') {
+                continue;
             }
+
+            // Add an anonymous attribute. Load every instance only once.
+            $instances[$event->instanceid] ??= moodleoverflow_model::from_id($event->instanceid);
+            $event->anonymous = anonymous::is_post_anonymous(
+                (object) ['userid' => $event->discussionuserid],
+                $instances[$event->instanceid],
+                $event->postuserid
+            );
+
+            // If the post is anonymous, make the author anonymous.
+            if ($event->anonymous) {
+                $event->postuserfirstname = 'anonymous';
+                $event->postuserlastname = '';
+            }
+
+            // Add links.
+            $event->linktopost = new moodle_url(
+                '/mod/moodleoverflow/discussion.php',
+                ['d' => $event->postdiscussion],
+                'p' . $event->postid
+            );
+            $event->linktoauthor = $event->anonymous ? new moodle_url('') :
+                new moodle_url('/user/view.php', ['id' => $event->postuserid]);
         }
         return $moodleoverflowevents;
     }
-
     /**
      * Builds the sql statement to get all moodleoverflow posts from the database.
      *
      * @param array $courses
      * @param int $timestart
+     * @param int $moduleid ID of the moodleoverflow plugin in the moodle instance.
      * @return array
      * @throws dml_exception|coding_exception
      */
-    private static function get_moodleoverflowposts_from_db(array $courses, int $timestart): array {
+    private static function get_moodleoverflowposts_from_db(array $courses, int $timestart, int $moduleid): array {
         global $DB;
 
         // Prepare params for sql statement.
-        [$insqlcourses, $inparamscourses] = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
-        $params = ['courses' => $courses, 'timestart' => $timestart] + $inparamscourses;
+        [$insqlcourses, $params] = $DB->get_in_or_equal($courses, SQL_PARAMS_NAMED);
+        $params += ['timestart' => $timestart, 'moduleid' => $moduleid];
 
-        $sql = "SELECT (ROW_NUMBER() OVER (ORDER BY posts.id)) AS row_num,
-                'moodleoverflow' AS modulename,
-                module.id AS instanceid,
-                module.anonymous AS anonymoussetting,
-                'post' AS eventtype,
-                cm.id AS coursemoduleid,
-                cm.availability AS availability,
-                module.name AS instancename,
-                discuss.course AS courseid,
-                discuss.userid AS discussionuserid,
-                discuss.name AS discussionsubject,
-                u.firstname AS postuserfirstname,
-                u.lastname AS postuserlastname,
-                posts.id AS postid,
-                posts.discussion AS postdiscussion,
-                posts.parent AS postparentid,
-                posts.userid AS postuserid,
-                posts.created AS timestart,
-                posts.message AS content,
-                posts.messageformat AS postmessageformat
-            FROM {moodleoverflow_posts} posts
-            JOIN {moodleoverflow_discussions} discuss ON discuss.id = posts.discussion
-            JOIN {moodleoverflow} module ON module.id = discuss.moodleoverflow
-            JOIN {modules} modules ON modules.name = 'moodleoverflow'
-            JOIN {user} u ON u.id = posts.userid
-            JOIN {course_modules} cm ON (cm.course = module.course AND cm.module = modules.id AND cm.instance = module.id)
-            WHERE discuss.course $insqlcourses
-                AND posts.created > :timestart
-                AND cm.visible = 1
-                AND modules.visible = 1
-                ORDER BY posts.created DESC;";
+        $sql = "SELECT p.id AS postid,
+                   'moodleoverflow' AS modulename,
+                   'post' AS eventtype,
+                   m.id AS instanceid,
+                   m.name AS instancename,
+                   cm.id AS coursemoduleid,
+                   cm.availability,
+                   d.course AS courseid,
+                   d.userid AS discussionuserid,
+                   d.name AS discussionsubject,
+                   u.firstname AS postuserfirstname,
+                   u.lastname AS postuserlastname,
+                   p.discussion AS postdiscussion,
+                   p.parent AS postparentid,
+                   p.userid AS postuserid,
+                   p.created AS timestart,
+                   p.message AS content,
+                   p.messageformat AS postmessageformat
+              FROM {moodleoverflow_posts} p
+              JOIN {moodleoverflow_discussions} d ON d.id = p.discussion
+              JOIN {moodleoverflow} m ON m.id = d.moodleoverflow
+              JOIN {course_modules} cm ON cm.module = :moduleid AND cm.instance = m.id
+              JOIN {user} u ON u.id = p.userid
+             WHERE d.course $insqlcourses
+               AND p.created > :timestart
+               AND p.reviewed = 1
+               AND cm.visible = 1
+          ORDER BY p.created DESC";
 
         return $DB->get_records_sql($sql, $params);
     }
@@ -184,16 +192,5 @@ class moodleoverflow implements townsquaresupportinterface {
 
         // Get all events.
         return $DB->get_records_sql($sql, $params);
-    }
-
-    /**
-     * Helper function to check if a post is anonymous. Helps to reduce the cyclomatic complexity.
-     * @param object $event
-     * @return bool
-     */
-    private static function is_post_anonymous(object $event): bool {
-        $discussion = (object) ['userid' => $event->discussionuserid];
-        $moodleoverflow = (object) ['anonymous' => $event->anonymoussetting];
-        return anonymous::is_post_anonymous($discussion, $moodleoverflow, $event->postuserid);
     }
 }
